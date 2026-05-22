@@ -11,6 +11,7 @@ export default function SnowControlSystem() {
   const [activeVideoTab, setActiveVideoTab] = useState("CCTV");
   const [hoveredVehicleId, setHoveredVehicleId] = useState<string | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<any | null>(null);
+  const [selectedMaterial, setSelectedMaterial] = React.useState<'소금' | '염화칼슘' | '모래'>('염화칼슘');
 
   // 샘플 데이터
   const vehicles = [
@@ -132,21 +133,10 @@ export default function SnowControlSystem() {
           {/* --- 파트 끝 --- */}
 
           {/* 제설업무지원 버튼 */}
-          <div className="px-1">
-            <button
-              onClick={() => alert("지원 시스템 준비 중입니다.")}
-              className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl font-bold text-white shadow-lg shadow-blue-900/40 hover:scale-[1.02] active:scale-95 transition-all group"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-xl group-hover:rotate-12 transition-transform">🛠️</span>
-                <div className="flex flex-col items-start">
-                  <span className="text-xs text-blue-200 font-medium">Support System</span>
-                  <span className="text-sm">제설업무지원</span>
-                </div>
-              </div>
-              <span className="text-blue-300 group-hover:translate-x-1 transition-transform">〉</span>
-            </button>
-          </div>
+          <a href="/sup" className="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl transition-colors group">
+            <span className="text-lg group-hover:scale-110 transition-transform">📋</span>
+            <span className="text-sm font-bold">제설업무지원</span>
+          </a>
 
           {/* 실시간 위성 영상 (실제 기상청 데이터 연동) */}
           <div className="bg-slate-800/40 rounded-2xl border border-slate-800 overflow-hidden">
@@ -177,41 +167,80 @@ export default function SnowControlSystem() {
           </div>
 
           {/* 지역 현황 탭 */}
-          <div className="bg-slate-800/40 rounded-2xl border border-slate-800 overflow-hidden flex flex-col min-h-[220px]">
-            <div className="flex border-b border-slate-800">
-              {["재고", "작업"].map((tab) => (
+          {/* --- 지역재고현황 패널 (요구사항 반영 디테일 완성 버전) --- */}
+          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur-md flex flex-col gap-3.5">
+
+            {/* 상단 헤더: 요구사항 1 반영 - 깜빡이는 LIVE 라벨 및 외곽 테두리 전면 삭제 */}
+            <div className="flex justify-between items-center">
+              <h2 className="text-sm font-black text-white tracking-tight flex items-center gap-2">
+                🏔️ 지역 저장소 재고 현황
+              </h2>
+            </div>
+
+            {/* 자재 선택 세그먼트: 요구사항 2 반영 - 흰색/테두리 라인을 지우고 배경색 대비로만 매끄럽게 스위칭 */}
+            <div className="grid grid-cols-3 gap-1 p-1 bg-slate-950 rounded-xl">
+              {(['소금', '염화칼슘', '모래'] as const).map((mat) => (
                 <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`flex-1 py-2.5 text-[14px] font-bold transition ${activeTab === tab ? 'bg-blue-600 text-white shadow-inner' : 'text-slate-500 hover:text-slate-300'}`}
+                  key={mat}
+                  onClick={() => setSelectedMaterial(mat)}
+                  className={`py-1.5 text-xs font-black rounded-lg transition-all cursor-pointer ${selectedMaterial === mat
+                    ? 'bg-blue-600 text-white shadow-[0_2px_8px_rgba(59,130,246,0.3)]'
+                    : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900/40'
+                    }`}
                 >
-                  지역 {tab}현황
+                  {mat}
                 </button>
               ))}
             </div>
-            <div className="flex-1 p-3 space-y-2 overflow-y-auto custom-scrollbar">
-              {activeTab === "재고" ? (
-                stockData.map((item, i) => (
-                  <div key={i} className="flex justify-between items-center p-2 bg-slate-900/50 rounded-lg border border-slate-800/50">
-                    <span className="text-xs text-slate-300">{item.location}</span>
-                    <span className="text-xs font-bold text-blue-400">{item.amount}</span>
-                  </div>
-                ))
-              ) : (
-                workData.map((work, i) => (
-                  <div key={i} className="space-y-1.5 p-2 bg-slate-900/50 rounded-lg border border-slate-800/50">
-                    <div className="flex justify-between text-[10px]">
-                      <span className="text-slate-300">{work.area}</span>
-                      <span className="text-green-400 font-bold">{work.progress}%</span>
-                    </div>
-                    <div className="w-full h-1 bg-slate-700 rounded-full overflow-hidden">
-                      <div className="h-full bg-green-500" style={{ width: `${work.progress}%` }}></div>
-                    </div>
-                  </div>
-                ))
-              )}
+
+            {/* 저장소 리스트: 요구사항 3 반영 - no-scrollbar 클래스를 주어 불필요한 우측 스크롤바 완전 히든 처리 */}
+            <div className="space-y-2 max-h-[180px] overflow-y-auto no-scrollbar">
+
+              {/* 서초 제3 저장소 */}
+              <div className="p-3 bg-slate-950/40 border border-slate-850 hover:border-slate-800 rounded-xl transition-all flex justify-between items-center group">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs font-bold text-slate-200 group-hover:text-white transition-colors">서초 제3 저장소</span>
+                  <span className="text-[10px] text-slate-500">담당: 서초구청 도로관리소</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-sm font-mono font-black text-blue-400">
+                    {selectedMaterial === '염화칼슘' ? '42.5' : selectedMaterial === '소금' ? '85.0' : '120.0'}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-bold ml-1">톤</span>
+                </div>
+              </div>
+
+              {/* 강남 대기소 저장고 */}
+              <div className="p-3 bg-slate-950/40 border border-slate-850 hover:border-slate-800 rounded-xl transition-all flex justify-between items-center group">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs font-bold text-slate-200 group-hover:text-white transition-colors">강남 율현 저장소</span>
+                  <span className="text-[10px] text-slate-500">담당: 강남구청 도로과</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-sm font-mono font-black text-slate-300">
+                    {selectedMaterial === '염화칼슘' ? '18.2' : selectedMaterial === '소금' ? '40.5' : '65.0'}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-bold ml-1">톤</span>
+                </div>
+              </div>
+
+              {/* 송파 오륜 저장소 */}
+              <div className="p-3 bg-slate-950/40 border border-slate-850 hover:border-slate-800 rounded-xl transition-all flex justify-between items-center group">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs font-bold text-slate-200 group-hover:text-white transition-colors">송파 장지 저장소</span>
+                  <span className="text-[10px] text-slate-500">담당: 송파구청 치수과</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-sm font-mono font-black text-slate-300">
+                    {selectedMaterial === '염화칼슘' ? '64.0' : selectedMaterial === '소금' ? '92.1' : '210.5'}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-bold ml-1">톤</span>
+                </div>
+              </div>
+
             </div>
           </div>
+
         </div>
       </aside>
 
@@ -241,9 +270,9 @@ export default function SnowControlSystem() {
         <div className="absolute top-6 left-6 z-10 pointer-events-none">
           <h2 className="text-2xl font-black text-white flex items-center gap-2 drop-shadow-md">
             <span className="w-1.5 h-6 bg-blue-500 rounded-full"></span>
-            SEOUL COMMAND INTERFACE
+            CLEAR SNOW CONTROL SYSTEM 
           </h2>
-          <p className="text-xs text-slate-400 font-mono mt-1 ml-3.5">REAL-TIME GPS TRACKING & TELEMETRY</p>
+          <p className="text-xs text-slate-400 font-mono mt-1 ml-3.5">REAL-TIME VIDEO & GPS TRACKING INTERFACE</p>
         </div>
 
         {/* --- 지도 위 차량 위치 핀 15대 렌더링 --- */}
@@ -253,16 +282,15 @@ export default function SnowControlSystem() {
           return (
             <div
               key={`pin-${idx}`}
-              className="absolute flex flex-col items-center gap-1.5 z-10 transition-all duration-500"
+              // 👉 중요: 전체 핀 영역에 cursor-pointer와 select-none을 주어 이모지가 글자로 인식되는 것을 원천 차단합니다!
+              className="absolute flex flex-col items-center gap-1.5 z-10 transition-all duration-500 cursor-pointer select-none"
               style={{
                 top: car.top,
                 left: car.left,
-                // 선택된 차량은 지도 줌인 상태에서 더 잘 보이도록 레이어 순위(z-index)를 최상위로 격상
                 zIndex: isCurrentSelected ? 30 : 10
               }}
               onMouseEnter={() => setHoveredVehicleId(car.id)}
               onMouseLeave={() => setHoveredVehicleId(null)}
-              // 핀을 클릭해도 상세 정보 창이 열리도록 연동
               onClick={() => setSelectedVehicle(car)}
             >
               {/* 상태별 라벨 */}
@@ -275,7 +303,8 @@ export default function SnowControlSystem() {
                 {(car.status === '운행중' || isCurrentSelected) && (
                   <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-50 ${isCurrentSelected ? 'bg-amber-400' : 'bg-blue-400'}`}></span>
                 )}
-                <div className={`relative w-7 h-7 border rounded-full flex items-center justify-center text-xs transition-all ${hoveredVehicleId === car.id || isCurrentSelected ? 'scale-125' : ''} ${isCurrentSelected ? 'bg-amber-500 border-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.9)]' : car.status === '운행중' ? 'bg-blue-600 border-blue-300 shadow-[0_0_10px_rgba(59,130,246,0.8)]' : 'bg-slate-700 border-slate-500 shadow-lg'}`}>
+                {/* 👉 여기 둥근 원 안에도 cursor-pointer를 꼼꼼하게 각인해 줍니다. */}
+                <div className={`relative w-7 h-7 border rounded-full flex items-center justify-center text-xs transition-all cursor-pointer ${hoveredVehicleId === car.id || isCurrentSelected ? 'scale-125' : ''} ${isCurrentSelected ? 'bg-amber-500 border-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.9)]' : car.status === '운행중' ? 'bg-blue-600 border-blue-300 shadow-[0_0_10px_rgba(59,130,246,0.8)]' : 'bg-slate-700 border-slate-500 shadow-lg'}`}>
                   {isCurrentSelected ? '📍' : car.status === '운행중' ? '🚜' : '💤'}
                 </div>
               </div>
@@ -284,11 +313,12 @@ export default function SnowControlSystem() {
         })}
 
         {/* --- 요구사항 반영: 지도 위 차량 상세 정보 팝업 오버레이 (Infowindow) --- */}
+        {/* --- 개편: 지도 위 차량 상세 정보 팝업 오버레이 (실시간 영상 내장 버전) --- */}
         {selectedVehicle && (
-          <div className="absolute top-24 left-6 z-30 w-72 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="absolute top-24 left-6 z-30 w-72 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-top-4 duration-300 flex flex-col gap-3">
 
-            {/* 팝업 헤더: 요구사항 반영 개편 */}
-            <div className="flex justify-between items-center border-b border-slate-800 pb-2.5 mb-3">
+            {/* 1. 팝업 헤더 (기존과 동일) */}
+            <div className="flex justify-between items-center border-b border-slate-800 pb-2.5">
               <div className="flex items-baseline gap-1.5 min-w-0 flex-1">
                 <h3 className="text-sm font-black text-white truncate">{selectedVehicle.id}</h3>
                 <span className="text-[14px] font-mono text-blue-400 font-bold tracking-tight shrink-0">
@@ -296,7 +326,6 @@ export default function SnowControlSystem() {
                 </span>
               </div>
 
-              {/* 요구사항 2: 차량 상태 배지를 닫기 버튼 왼쪽에 배치 */}
               <div className="flex items-center gap-2 shrink-0 ml-2">
                 <span className={`px-1.5 py-0.5 rounded text-[12px] font-black tracking-wide leading-none ${selectedVehicle.status === '운행중'
                   ? 'bg-blue-600 text-white shadow-[0_0_8px_rgba(59,130,246,0.4)]'
@@ -305,7 +334,6 @@ export default function SnowControlSystem() {
                   {selectedVehicle.status}
                 </span>
 
-                {/* 닫기 버튼 */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -318,8 +346,8 @@ export default function SnowControlSystem() {
               </div>
             </div>
 
-            {/* 타이틀과 중복되는 [차량명, 차량번호, 차량상태] 3줄을 삭제하여 극도로 슬림화 */}
-            <div className="space-y-2 text-xs">
+            {/* 2. 4줄 핵심 상세 정보 (기존과 동일) */}
+            <div className="space-y-1.5 text-xs">
               <div className="flex justify-between items-center p-1.5 bg-slate-950/40 rounded border border-slate-800/60">
                 <span className="text-slate-500">운전자명</span>
                 <span className="text-slate-200 font-bold">{selectedVehicle.driver} 기사님</span>
@@ -335,6 +363,40 @@ export default function SnowControlSystem() {
               <div className="flex justify-between items-center p-1.5 bg-slate-950/40 rounded border border-slate-800/60">
                 <span className="text-slate-500">총 운행거리</span>
                 <span className="text-amber-400 font-bold font-mono">{selectedVehicle.distance} km</span>
+              </div>
+            </div>
+
+            {/* 👉 3. 새로 추가된 요구사항: 차량별 실시간 영상 매베딩 영역 */}
+            <div className="mt-1">
+              <p className="text-[11px] font-bold text-slate-500 mb-1.5 flex items-center gap-1">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${selectedVehicle.status === '운행중' ? 'animate-ping bg-red-400' : 'bg-slate-500'}`}></span>
+                  <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${selectedVehicle.status === '운행중' ? 'bg-red-500' : 'bg-slate-500'}`}></span>
+                </span>
+                차량 전방 단말기 영상 (LIVE)
+              </p>
+
+              <div className="relative aspect-video bg-black rounded-xl overflow-hidden border border-slate-800 group shadow-inner">
+                {/* 운행 상태에 따라 흑백/컬러 처리 및 오버레이 제공 */}
+                <img
+                  src="https://images.unsplash.com/photo-1418065460487-3e41a6c8e1e4?auto=format&fit=crop&q=80"
+                  alt="Vehicle Live Dashcam"
+                  className={`w-full h-full object-cover transition-all duration-500 ${selectedVehicle.status === '미운행' ? 'grayscale opacity-20' : 'opacity-70 group-hover:opacity-90'}`}
+                />
+
+                {/* 미운행 차량인 경우 오프라인 마크 표시 */}
+                {selectedVehicle.status === '미운행' ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                    <span className="text-slate-500 font-black text-[10px] tracking-widest bg-slate-950/80 px-2.5 py-1 rounded-md border border-slate-800">
+                      SIGNAL OFFLINE
+                    </span>
+                  </div>
+                ) : (
+                  /* 운행중인 차량은 영상 우측 하단에 채널 표시 */
+                  <div className="absolute bottom-1.5 right-2 text-[9px] font-mono text-white/40 bg-black/50 px-1.5 py-0.5 rounded">
+                    CAM-{selectedVehicle.id.replace('호', '')}
+                  </div>
+                )}
               </div>
             </div>
 
