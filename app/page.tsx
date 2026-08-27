@@ -15,8 +15,8 @@ export default function SnowControlSystem() {
 
   // 샘플 데이터
   const vehicles = [
-    { id: '01호', plate: '88바 1001', driver: '최긴급', phone: '010-1234-5671', area: '송파구역', status: '미운행', battery: 15, distance: 0, top: '70%', left: '60%' },
-    { id: '02호', plate: '88바 1002', driver: '박대기', phone: '010-1234-5672', area: '관제센터', status: '미운행', battery: 100, distance: 12, top: '50%', left: '50%' },
+    { id: '01호', plate: '88바 1001', driver: '최긴급', phone: '010-1234-5671', area: '송파구역', status: '미운행', battery: 5, distance: 0, top: '70%', left: '60%' },
+    { id: '02호', plate: '88바 1002', driver: '박대기', phone: '010-1234-5672', area: '관제센터', status: '미운행', battery: 0, distance: 12, top: '50%', left: '50%' },
     { id: '03호', plate: '88바 1003', driver: '이방빙', phone: '010-1234-5673', area: '서초구역', status: '운행중', battery: 42, distance: 45, top: '65%', left: '45%' },
     { id: '04호', plate: '88바 1004', driver: '김제설', phone: '010-1234-5674', area: '강남구역', status: '운행중', battery: 85, distance: 78, top: '60%', left: '55%' },
     { id: '05호', plate: '88바 1005', driver: '홍길동', phone: '010-1234-5675', area: '영등포구역', status: '운행중', battery: 75, distance: 32, top: '55%', left: '35%' },
