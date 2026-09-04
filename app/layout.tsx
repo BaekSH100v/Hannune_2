@@ -1,7 +1,7 @@
 import './globals.css';
 
 export const metadata = {
-  title: '한누네 제설 관제 시스템',
+  title: 'Hannune 제설관제시스템',
   description: '실시간 제설 차량 GPS 원격 모니터링 시스템',
 };
 
