@@ -1,4 +1,5 @@
 import './globals.css';
+import AuthGuard from './components/AuthGuard';
 
 export const metadata = {
   title: 'Hannune 제설관제시스템',
@@ -13,7 +14,7 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className="antialiased m-0 p-0 overflow-hidden bg-slate-950">
-        {children}
+        <AuthGuard>{children}</AuthGuard>
       </body>
     </html>
   );
