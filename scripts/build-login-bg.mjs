@@ -10,8 +10,8 @@ const chunks = fs
   .sort()
   .map((name) => fs.readFileSync(path.join(sourceDir, name), "utf8").trim());
 
-if (chunks.length !== 5) {
-  throw new Error(`Expected 5 login background chunks, found ${chunks.length}`);
+if (chunks.length !== 6) {
+  throw new Error(`Expected 6 login background chunks, found ${chunks.length}`);
 }
 
 const image = Buffer.from(chunks.join(""), "base64");
