@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 const monthlyStats = [
   { month: '1월', inbound: 210, outbound: 132 },
@@ -17,12 +17,32 @@ const monthlyStats = [
   { month: '12월', inbound: 332, outbound: 246 },
 ];
 
-const stockWarehouses = [
-  { id: 'WH-01', name: '서초 제3 자재창고', manager: '박물류', phone: '010-1111-2222', total: '142.5톤' },
-  { id: 'WH-02', name: '강남 율현 자재창고', manager: '이창고', phone: '010-3333-4444', total: '86.2톤' },
-  { id: 'WH-03', name: '송파 장지 자재창고', manager: '김재고', phone: '010-5555-6666', total: '31.4톤' },
-  { id: 'WH-04', name: '강동 비상 자재창고', manager: '최보급', phone: '010-7777-8888', total: '58.0톤' },
+const MATERIAL_OPTIONS = [
+  { name: '염화칼슘', defaultUnit: '톤' },
+  { name: '소금', defaultUnit: '톤' },
+  { name: '친환경 제설제', defaultUnit: '톤' },
+  { name: '모래', defaultUnit: '톤' },
+  { name: '모래주머니', defaultUnit: '개' },
 ];
+
+type WarehouseRecord = {
+  id: string;
+  name: string;
+  manager: string;
+  phone: string;
+  material: string;
+  total: number;
+  unit: string;
+};
+
+const initialWarehouses: WarehouseRecord[] = [
+  { id: 'WH-01', name: '서초 제3 자재창고', manager: '박물류', phone: '010-1111-2222', material: '염화칼슘', total: 142.5, unit: '톤' },
+  { id: 'WH-02', name: '강남 율현 자재창고', manager: '이창고', phone: '010-3333-4444', material: '소금', total: 86.2, unit: '톤' },
+  { id: 'WH-03', name: '송파 장지 자재창고', manager: '김재고', phone: '010-5555-6666', material: '친환경 제설제', total: 31.4, unit: '톤' },
+  { id: 'WH-04', name: '강동 비상 자재창고', manager: '최보급', phone: '010-7777-8888', material: '모래', total: 58, unit: '톤' },
+];
+
+const WAREHOUSE_STORAGE_KEY = 'hannune_stock_warehouses';
 
 const initialStockLogs = [
   { id: 'LOG-101', date: '2026-06-01 10:30', type: '입고', item: '염화칼슘', qty: 50, unit: '톤', manager: '박물류', region: '서초 제3 자재창고' },
@@ -35,17 +55,74 @@ const initialStockLogs = [
 export default function StockPage() {
   const [currentYear, setCurrentYear] = useState('2026');
   const [stockLogs, setStockLogs] = useState(initialStockLogs);
+  const [warehouses, setWarehouses] = useState<WarehouseRecord[]>(initialWarehouses);
+  const [editingWarehouseId, setEditingWarehouseId] = useState<string | null>(null);
+  const [warehouseForm, setWarehouseForm] = useState<WarehouseRecord | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalForm, setModalForm] = useState({
     type: '입고',
-    region: stockWarehouses[0].name,
-    item: '염화칼슘',
+    region: initialWarehouses[0].name,
+    item: initialWarehouses[0].material,
     qty: 0,
   });
 
-  const handleModalChange = (field: string, value: string | number) => {
-    setModalForm({ ...modalForm, [field]: value });
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(WAREHOUSE_STORAGE_KEY);
+      if (!saved) return;
+      const parsed = JSON.parse(saved) as WarehouseRecord[];
+      if (Array.isArray(parsed) && parsed.length > 0) setWarehouses(parsed);
+    } catch {
+      // 프로토타입에서는 저장 데이터 오류 시 기본값을 사용합니다.
+    }
+  }, []);
+
+  const persistWarehouses = (next: WarehouseRecord[]) => {
+    setWarehouses(next);
+    window.localStorage.setItem(WAREHOUSE_STORAGE_KEY, JSON.stringify(next));
   };
+
+  const handleWarehouseEdit = (warehouse: WarehouseRecord) => {
+    setEditingWarehouseId(warehouse.id);
+    setWarehouseForm({ ...warehouse });
+  };
+
+  const handleWarehouseMaterialChange = (material: string) => {
+    const defaultUnit = MATERIAL_OPTIONS.find((item) => item.name === material)?.defaultUnit ?? '톤';
+    setWarehouseForm((current) => current ? { ...current, material, unit: defaultUnit } : current);
+  };
+
+  const handleWarehouseSave = () => {
+    if (!warehouseForm || !editingWarehouseId) return;
+    if (warehouseForm.total < 0) {
+      window.alert('총 수량은 0 이상이어야 합니다.');
+      return;
+    }
+
+    persistWarehouses(
+      warehouses.map((warehouse) => warehouse.id === editingWarehouseId ? warehouseForm : warehouse),
+    );
+    setEditingWarehouseId(null);
+    setWarehouseForm(null);
+  };
+
+  const handleModalChange = (field: string, value: string | number) => {
+    if (field === 'region' && typeof value === 'string') {
+      const warehouse = warehouses.find((item) => item.name === value);
+      setModalForm((current) => ({
+        ...current,
+        region: value,
+        item: warehouse?.material ?? current.item,
+      }));
+      return;
+    }
+    setModalForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const selectedWarehouse = useMemo(
+    () => warehouses.find((item) => item.name === modalForm.region),
+    [warehouses, modalForm.region],
+  );
 
   const handleModalSubmit = () => {
     if (modalForm.qty <= 0) {
@@ -53,11 +130,7 @@ export default function StockPage() {
       return;
     }
 
-    let unit = '개';
-    if (modalForm.item === '염화칼슘') unit = '톤';
-    if (modalForm.item === '친환경 제설제') unit = '포';
-
-    const warehouse = stockWarehouses.find((item) => item.name === modalForm.region);
+    const unit = MATERIAL_OPTIONS.find((item) => item.name === modalForm.item)?.defaultUnit ?? '개';
     const newLog = {
       id: `LOG-${Date.now().toString().slice(-4)}`,
       date: new Date().toISOString().slice(0, 16).replace('T', ' '),
@@ -65,13 +138,13 @@ export default function StockPage() {
       item: modalForm.item,
       qty: modalForm.qty,
       unit,
-      manager: warehouse?.manager ?? '시스템 관리자',
+      manager: selectedWarehouse?.manager ?? '시스템 관리자',
       region: modalForm.region,
     };
 
     setStockLogs([newLog, ...stockLogs]);
     setIsModalOpen(false);
-    setModalForm({ ...modalForm, qty: 0 });
+    setModalForm((current) => ({ ...current, qty: 0 }));
   };
 
   return (
@@ -83,9 +156,7 @@ export default function StockPage() {
           </div>
           <div>
             <h2 className="text-xl font-black text-white">지역별 재고 통합 관리</h2>
-            <p className="text-xs text-slate-500 mt-1">
-              자재 창고별 재고와 입출고 이력을 관리하고 운영 현황을 확인합니다.
-            </p>
+            <p className="text-xs text-slate-500 mt-1">자재 창고별 재고와 입출고 이력을 관리하고 운영 현황을 확인합니다.</p>
           </div>
         </div>
 
@@ -99,7 +170,13 @@ export default function StockPage() {
             <option value="2025">2025년</option>
           </select>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              const firstWarehouse = warehouses[0];
+              if (firstWarehouse) {
+                setModalForm((current) => ({ ...current, region: firstWarehouse.name, item: firstWarehouse.material }));
+              }
+              setIsModalOpen(true);
+            }}
             className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-5 py-2.5 rounded-lg shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all active:scale-95"
           >
             + 수동 입출고 등록
@@ -108,28 +185,17 @@ export default function StockPage() {
       </div>
 
       <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-4">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2">
-          📊 {currentYear}년 월별 자재 입출고 현황
-        </h3>
+        <h3 className="text-sm font-bold text-white flex items-center gap-2">📊 {currentYear}년 월별 자재 입출고 현황</h3>
 
         <div className="flex items-end justify-between h-48 pt-4 gap-2 border-b border-slate-800 pb-2">
           {monthlyStats.map((stat) => {
             const inHeight = Math.min((stat.inbound / 350) * 100, 100);
             const outHeight = Math.min((stat.outbound / 350) * 100, 100);
-
             return (
               <div key={stat.month} className="flex flex-col items-center gap-2 flex-1 group">
                 <div className="flex gap-1 w-full justify-center items-end h-full">
-                  <div
-                    className="w-1/3 bg-blue-600 rounded-t-sm transition-all duration-700 group-hover:bg-blue-500"
-                    style={{ height: `${inHeight}%` }}
-                    title={`입고: ${stat.inbound}`}
-                  />
-                  <div
-                    className="w-1/3 bg-amber-500 rounded-t-sm transition-all duration-700 group-hover:bg-amber-400"
-                    style={{ height: `${outHeight}%` }}
-                    title={`출고: ${stat.outbound}`}
-                  />
+                  <div className="w-1/3 bg-blue-600 rounded-t-sm transition-all duration-700 group-hover:bg-blue-500" style={{ height: `${inHeight}%` }} title={`입고: ${stat.inbound}`} />
+                  <div className="w-1/3 bg-amber-500 rounded-t-sm transition-all duration-700 group-hover:bg-amber-400" style={{ height: `${outHeight}%` }} title={`출고: ${stat.outbound}`} />
                 </div>
                 <span className="text-[10px] font-mono text-slate-500 whitespace-nowrap">{stat.month}</span>
               </div>
@@ -144,59 +210,85 @@ export default function StockPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 shadow-xl flex flex-col gap-4">
-          <div className="flex justify-between items-center gap-3">
-            <div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">🏬 재고 관리</h3>
-              <p className="mt-1 text-[10px] text-slate-500">담당자 정보는 마이페이지 등록 정보와 연동 예정입니다.</p>
-            </div>
-            <button
-              onClick={() => window.alert('자재 창고 등록·수정 기능은 개발 연동 단계에서 연결합니다.')}
-              className="text-[10px] bg-slate-800 text-slate-300 px-2.5 py-1.5 rounded hover:bg-slate-700 transition-colors shrink-0"
-            >
-              관리
-            </button>
+          <div>
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">🏬 재고 관리</h3>
+            <p className="mt-1 text-[10px] text-slate-500">담당자·연락처는 마이페이지에서 관리하고, 자재명과 총 수량은 여기에서 수정합니다.</p>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-slate-800">
-            <div className="grid grid-cols-[1.35fr_0.8fr] gap-x-3 border-b border-slate-800 bg-slate-950 px-3 py-2 text-[9px] font-bold text-slate-600">
-              <span>자재 창고명</span>
-              <span className="text-right">총 수량</span>
-            </div>
-            <div className="divide-y divide-slate-800/60">
-              {stockWarehouses.map((warehouse) => (
-                <div key={warehouse.id} className="p-3 bg-slate-950/45 hover:bg-slate-950/70 transition-colors">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-black text-slate-200">{warehouse.name}</p>
-                      <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-slate-500">
-                        <span className="font-bold text-slate-400">담당자 {warehouse.manager}</span>
-                        <span className="text-slate-700">·</span>
-                        <span className="font-mono">{warehouse.phone}</span>
-                      </div>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <p className="font-mono text-sm font-black text-blue-300">{warehouse.total}</p>
-                      <p className="mt-1 text-[9px] font-bold text-slate-600">총 수량</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-4 gap-1.5 rounded-xl border border-slate-800/70 bg-slate-950/35 p-3 text-center">
-            <div>
-              <p className="text-[9px] font-bold text-slate-600">창고</p>
-              <p className="mt-1 font-mono text-sm font-black text-white">{stockWarehouses.length}</p>
-            </div>
-            <div>
-              <p className="text-[9px] font-bold text-slate-600">담당자</p>
-              <p className="mt-1 font-mono text-sm font-black text-white">{new Set(stockWarehouses.map((item) => item.manager)).size}</p>
-            </div>
-            <div className="col-span-2 border-l border-slate-800 pl-2">
-              <p className="text-[9px] font-bold text-slate-600">관리 기준</p>
-              <p className="mt-1 text-[10px] font-bold text-slate-400">창고별 재고 · 담당자 · 연락처</p>
-            </div>
+          <div className="overflow-x-auto rounded-xl border border-slate-800">
+            <table className="w-full min-w-[720px] text-left text-xs border-collapse">
+              <thead className="bg-slate-950 text-slate-500 font-bold border-b border-slate-800">
+                <tr>
+                  <th className="p-3">자재 창고명</th>
+                  <th className="p-3">자재명</th>
+                  <th className="p-3">담당자</th>
+                  <th className="p-3">연락처</th>
+                  <th className="p-3 text-right">총 수량</th>
+                  <th className="p-3 text-center">관리</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {warehouses.map((warehouse) => {
+                  const isEditing = editingWarehouseId === warehouse.id && warehouseForm;
+                  return (
+                    <tr key={warehouse.id} className={isEditing ? 'bg-blue-500/5' : 'hover:bg-slate-800/35'}>
+                      <td className="p-3 font-black text-slate-200">{warehouse.name}</td>
+                      <td className="p-3">
+                        {isEditing ? (
+                          <select
+                            value={warehouseForm.material}
+                            onChange={(e) => handleWarehouseMaterialChange(e.target.value)}
+                            className="w-full rounded-md border border-blue-500 bg-slate-950 px-2 py-1.5 text-xs font-bold text-white outline-none"
+                          >
+                            {MATERIAL_OPTIONS.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}
+                          </select>
+                        ) : (
+                          <span className="rounded-md bg-blue-500/10 px-2 py-1 text-[10px] font-black text-blue-300">{warehouse.material}</span>
+                        )}
+                      </td>
+                      <td className="p-3 font-bold text-slate-300">{warehouse.manager}</td>
+                      <td className="p-3 font-mono text-slate-500">{warehouse.phone}</td>
+                      <td className="p-3 text-right">
+                        {isEditing ? (
+                          <div className="flex items-center justify-end gap-1.5">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              value={warehouseForm.total}
+                              onChange={(e) => setWarehouseForm({ ...warehouseForm, total: Number(e.target.value) })}
+                              className="w-20 rounded-md border border-blue-500 bg-slate-950 px-2 py-1.5 text-right font-mono text-xs font-bold text-white outline-none"
+                            />
+                            <select
+                              value={warehouseForm.unit}
+                              onChange={(e) => setWarehouseForm({ ...warehouseForm, unit: e.target.value })}
+                              className="rounded-md border border-blue-500 bg-slate-950 px-2 py-1.5 text-xs text-white outline-none"
+                            >
+                              <option value="톤">톤</option>
+                              <option value="포">포</option>
+                              <option value="개">개</option>
+                              <option value="kg">kg</option>
+                            </select>
+                          </div>
+                        ) : (
+                          <span className="font-mono text-sm font-black text-blue-300">{warehouse.total.toLocaleString()} {warehouse.unit}</span>
+                        )}
+                      </td>
+                      <td className="p-3 text-center">
+                        {isEditing ? (
+                          <div className="flex justify-center gap-1.5">
+                            <button onClick={handleWarehouseSave} className="rounded-md bg-blue-600 px-2.5 py-1.5 text-[10px] font-black text-white hover:bg-blue-500">저장</button>
+                            <button onClick={() => { setEditingWarehouseId(null); setWarehouseForm(null); }} className="rounded-md border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-[10px] font-bold text-slate-300 hover:bg-slate-700">취소</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => handleWarehouseEdit(warehouse)} className="rounded-md border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-[10px] font-bold text-blue-300 hover:bg-slate-700">수정</button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -223,19 +315,11 @@ export default function StockPage() {
                   <tr key={log.id} className="hover:bg-slate-800/40 transition-colors">
                     <td className="p-3 font-mono text-slate-500">{log.date}</td>
                     <td className="p-3">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                        log.type === '입고' ? 'bg-blue-950/50 text-blue-400 border-blue-900' :
-                        log.type === '출고' ? 'bg-amber-950/50 text-amber-400 border-amber-900' :
-                        'bg-red-950/50 text-red-400 border-red-900'
-                      }`}>
-                        {log.type}
-                      </span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${log.type === '입고' ? 'bg-blue-950/50 text-blue-400 border-blue-900' : log.type === '출고' ? 'bg-amber-950/50 text-amber-400 border-amber-900' : 'bg-red-950/50 text-red-400 border-red-900'}`}>{log.type}</span>
                     </td>
                     <td className="p-3 text-slate-300 font-bold">{log.region}</td>
                     <td className="p-3 text-slate-300">{log.item}</td>
-                    <td className="p-3 text-right font-mono font-black text-slate-200">
-                      {log.type === '출고' ? '-' : '+'}{log.qty} <span className="text-[10px] font-sans text-slate-500 font-normal">{log.unit}</span>
-                    </td>
+                    <td className="p-3 text-right font-mono font-black text-slate-200">{log.type === '출고' ? '-' : '+'}{log.qty} <span className="text-[10px] font-sans text-slate-500 font-normal">{log.unit}</span></td>
                     <td className="p-3 text-center text-slate-400">{log.manager}</td>
                   </tr>
                 ))}
@@ -265,16 +349,14 @@ export default function StockPage() {
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">자재 창고</label>
                 <select value={modalForm.region} onChange={(e) => handleModalChange('region', e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-sm font-bold text-slate-200 outline-none focus:border-blue-500 transition-colors">
-                  {stockWarehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.name}>{warehouse.name}</option>)}
+                  {warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.name}>{warehouse.name}</option>)}
                 </select>
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">자재명</label>
                 <select value={modalForm.item} onChange={(e) => handleModalChange('item', e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-sm font-bold text-slate-200 outline-none focus:border-blue-500 transition-colors">
-                  <option value="염화칼슘">염화칼슘 (단위: 톤)</option>
-                  <option value="친환경 제설제">친환경 제설제 (단위: 포)</option>
-                  <option value="모래주머니">모래주머니 (단위: 개)</option>
+                  {MATERIAL_OPTIONS.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}
                 </select>
               </div>
 
