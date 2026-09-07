@@ -57,15 +57,19 @@ body {
   background: transparent;
 }
 
-/* Registered vehicle list: keep roughly ten rows visible, then scroll inside the card. */
-.custom-scrollbar {
+/*
+ * Registered vehicle table only: show about ten rows and scroll inside the card.
+ * Do not apply sizing/gutter rules to every .custom-scrollbar because the main
+ * control screen also uses that class in both sidebars and the video drawer.
+ */
+.custom-scrollbar:has(> table[class*="min-w-[1430px]"]) {
   max-height: 500px;
   overflow: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
 }
 
-.custom-scrollbar thead {
+.custom-scrollbar:has(> table[class*="min-w-[1430px]"]) thead {
   position: sticky;
   top: 0;
   z-index: 10;
