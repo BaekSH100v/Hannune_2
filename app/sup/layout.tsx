@@ -16,8 +16,8 @@ export default function SupportLayout({ children }: { children: React.ReactNode 
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col selection:bg-blue-500/30">
-      <header className="h-16 border-b border-slate-800/80 bg-slate-900/85 backdrop-blur-md px-5 lg:px-7 flex items-center justify-between shrink-0 sticky top-0 z-50 shadow-sm">
+    <div className="h-screen overflow-hidden bg-slate-950 text-slate-100 font-sans flex flex-col selection:bg-blue-500/30">
+      <header className="h-16 border-b border-slate-800/80 bg-slate-900/85 backdrop-blur-md px-5 lg:px-7 flex items-center justify-between shrink-0 z-50 shadow-sm">
         <Link href="/sup" className="flex items-center gap-3 cursor-pointer group shrink-0">
           <div className="w-8 h-8 rounded-lg border border-blue-500/30 bg-blue-500/10 flex items-center justify-center text-blue-300 shadow-[0_0_20px_rgba(59,130,246,0.12)] group-hover:bg-blue-500/15 transition">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
@@ -59,7 +59,7 @@ export default function SupportLayout({ children }: { children: React.ReactNode 
         </Link>
       </header>
 
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
         {children}
       </div>
     </div>
