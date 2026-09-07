@@ -15,15 +15,28 @@ export type VehicleRecord = {
   status: VehicleStatus;
 };
 
-export const VEHICLE_STORAGE_KEY = 'hannune_vehicle_management';
+export type AreaRecord = {
+  id: string;
+  order: number;
+  name: string;
+  route: string;
+  enabled: boolean;
+  status: '진행중' | '완료' | '대기';
+  progress: number;
+  updated: string;
+};
 
-export const AREA_OPTIONS = [
-  '미지정',
-  '강남 A구역',
-  '서초 B구역',
-  '송파 C구역',
-  '강동 D구역',
-] as const;
+export const VEHICLE_STORAGE_KEY = 'hannune_vehicle_management';
+export const AREA_STORAGE_KEY = 'hannune_area_management';
+
+export const initialAreas: AreaRecord[] = [
+  { id: 'area-001', order: 1, name: '강남 A구역', route: '테헤란로 · 영동대로', enabled: true, status: '진행중', progress: 82, updated: '5분 전' },
+  { id: 'area-002', order: 2, name: '서초 B구역', route: '반포대로 · 서초대로', enabled: true, status: '진행중', progress: 64, updated: '8분 전' },
+  { id: 'area-003', order: 3, name: '송파 C구역', route: '올림픽로 · 위례성대로', enabled: true, status: '완료', progress: 100, updated: '21분 전' },
+  { id: 'area-004', order: 4, name: '강동 D구역', route: '천호대로 · 양재대로', enabled: true, status: '대기', progress: 18, updated: '12분 전' },
+];
+
+export const AREA_OPTIONS = ['미지정', ...initialAreas.map((area) => area.name)] as const;
 
 export const initialVehicles: VehicleRecord[] = [
   { id: '01호', order: 1, icon: '🚜', name: '제설 1호기', plate: '88바 1001', type: '관용', driver: '최긴급', phone: '010-1234-5671', termId: 'GPS-T01', serial: 'SN-99812A', area: '강남 A구역', status: '미운행' },
@@ -60,4 +73,23 @@ export function loadVehicles(): VehicleRecord[] {
 export function saveVehicles(vehicles: VehicleRecord[]) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(VEHICLE_STORAGE_KEY, JSON.stringify(vehicles));
+}
+
+export function loadAreas(): AreaRecord[] {
+  if (typeof window === 'undefined') return initialAreas;
+
+  try {
+    const saved = window.localStorage.getItem(AREA_STORAGE_KEY);
+    if (!saved) return initialAreas;
+
+    const parsed = JSON.parse(saved) as AreaRecord[];
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : initialAreas;
+  } catch {
+    return initialAreas;
+  }
+}
+
+export function saveAreas(areas: AreaRecord[]) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(AREA_STORAGE_KEY, JSON.stringify(areas));
 }
