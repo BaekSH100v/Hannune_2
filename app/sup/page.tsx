@@ -2,20 +2,38 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { initialVehicles, loadVehicles, type VehicleRecord } from './data/vehicles';
-
-const workAreas = [
-  { area: '강남 A구역', route: '테헤란로 · 영동대로', status: '진행중', progress: 82, updated: '5분 전' },
-  { area: '서초 B구역', route: '반포대로 · 서초대로', status: '진행중', progress: 64, updated: '8분 전' },
-  { area: '송파 C구역', route: '올림픽로 · 위례성대로', status: '완료', progress: 100, updated: '21분 전' },
-  { area: '강동 D구역', route: '천호대로 · 양재대로', status: '대기', progress: 18, updated: '12분 전' },
-];
+import {
+  initialAreas,
+  initialVehicles,
+  loadAreas,
+  loadVehicles,
+  type AreaRecord,
+  type VehicleRecord,
+} from './data/vehicles';
 
 const materials = [
   { name: '염화칼슘', amount: '142.5톤', percent: 68, state: '양호', tone: 'bg-blue-500' },
   { name: '소금', amount: '86.2톤', percent: 54, state: '양호', tone: 'bg-cyan-500' },
   { name: '친환경 제설제', amount: '31.4톤', percent: 24, state: '보충 필요', tone: 'bg-amber-500' },
   { name: '모래', amount: '58.0톤', percent: 41, state: '보통', tone: 'bg-slate-500' },
+];
+
+const weatherMetrics = [
+  { label: '체감온도', value: '-5.4', unit: '℃', accent: 'text-cyan-300' },
+  { label: '노면온도', value: '-3.6', unit: '℃', accent: 'text-blue-300' },
+  { label: '습도', value: '82', unit: '%', accent: 'text-slate-200' },
+  { label: '풍속', value: '3.8', unit: 'm/s', accent: 'text-slate-200' },
+  { label: '시간당 강설', value: '1.6', unit: 'cm', accent: 'text-sky-300' },
+  { label: '강수확률', value: '90', unit: '%', accent: 'text-indigo-300' },
+];
+
+const weatherForecast = [
+  { time: '14시', icon: '❄', temp: '-2°', snow: '1.6cm' },
+  { time: '15시', icon: '❄', temp: '-3°', snow: '1.8cm' },
+  { time: '16시', icon: '☁', temp: '-3°', snow: '0.8cm' },
+  { time: '17시', icon: '❄', temp: '-4°', snow: '1.2cm' },
+  { time: '18시', icon: '❄', temp: '-4°', snow: '1.5cm' },
+  { time: '19시', icon: '☁', temp: '-5°', snow: '0.4cm' },
 ];
 
 function SectionHeader({
@@ -43,13 +61,20 @@ function SectionHeader({
 
 export default function SupportDashboardPage() {
   const [vehicles, setVehicles] = useState<VehicleRecord[]>(initialVehicles);
+  const [areas, setAreas] = useState<AreaRecord[]>(initialAreas);
   const [smsOpen, setSmsOpen] = useState(false);
   const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>([]);
   const [smsMessage, setSmsMessage] = useState('');
 
   useEffect(() => {
     setVehicles(loadVehicles());
+    setAreas(loadAreas());
   }, []);
+
+  const visibleAreas = useMemo(
+    () => areas.filter((area) => area.enabled).sort((a, b) => a.order - b.order),
+    [areas],
+  );
 
   const vehicleSummary = useMemo(() => {
     const running = vehicles.filter((vehicle) => vehicle.status === '운행중').length;
@@ -116,7 +141,7 @@ export default function SupportDashboardPage() {
             </div>
             <h1 className="text-2xl font-black tracking-[-0.03em] text-white lg:text-3xl">제설업무 운영 대시보드</h1>
             <p className="mt-2 max-w-3xl text-xs leading-6 text-slate-400 lg:text-sm">
-              구역별 제설 작업, 차량 운영 상태와 주요 제설자재 현황을 한 화면에서 확인합니다.
+              실시간 기상, 구역별 제설 작업, 차량 운영 상태와 주요 제설자재 현황을 한 화면에서 확인합니다.
             </p>
           </div>
 
@@ -131,53 +156,69 @@ export default function SupportDashboardPage() {
         </section>
 
         <section className="grid gap-5 xl:grid-cols-[1.55fr_0.85fr]">
-          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/55 p-5 shadow-lg">
-            <SectionHeader
-              eyebrow="TODAY'S OPERATION"
-              title="금일 구역별 제설 작업 현황"
-              description="차량관리에서 지정한 담당구역을 기준으로 현재 투입 차량 수를 표시합니다."
-              action={<span className="rounded-lg bg-slate-950 px-2.5 py-1.5 text-[10px] font-bold text-slate-500">4개 주요 구역</span>}
-            />
+          <div className="relative overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-900/55 p-5 shadow-lg">
+            <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-blue-500/[0.07] blur-3xl" />
+            <div className="pointer-events-none absolute bottom-0 left-1/4 h-32 w-64 rounded-full bg-cyan-400/[0.04] blur-3xl" />
 
-            <div className="mt-5 space-y-3">
-              {workAreas.map((work) => {
-                const assignedVehicles = areaVehicleCount(work.area);
-                return (
-                  <div key={work.area} className="rounded-xl border border-slate-800/70 bg-slate-950/45 p-4 transition hover:border-slate-700">
-                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-black text-slate-100">{work.area}</p>
-                          <span className={`rounded-md px-2 py-0.5 text-[9px] font-black ${
-                            work.status === '완료'
-                              ? 'bg-emerald-500/10 text-emerald-300'
-                              : work.status === '진행중'
-                                ? 'bg-blue-500/10 text-blue-300'
-                                : 'bg-slate-800 text-slate-400'
-                          }`}>
-                            {work.status}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-[11px] text-slate-500">{work.route}</p>
+            <div className="relative">
+              <SectionHeader
+                eyebrow="LIVE WEATHER"
+                title="실시간 날씨"
+                description="향후 기상 API 연동을 기준으로 설계한 제설 운영용 기상 패널입니다."
+                action={(
+                  <span className="rounded-lg border border-sky-500/20 bg-sky-500/10 px-2.5 py-1.5 text-[10px] font-black text-sky-300">
+                    API 연동 전 SAMPLE
+                  </span>
+                )}
+              />
+
+              <div className="mt-5 grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
+                <div className="rounded-2xl border border-slate-800/70 bg-slate-950/45 p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[11px] font-bold text-slate-500">서울특별시 · 관제지역 기준</p>
+                      <div className="mt-2 flex items-end gap-3">
+                        <span className="text-5xl font-black tracking-[-0.06em] text-white">-2.1°</span>
+                        <span className="pb-1 text-sm font-black text-sky-300">눈</span>
                       </div>
-                      <div className="flex items-center gap-4 text-[10px] font-bold text-slate-500">
-                        <span className="rounded-md bg-blue-500/10 px-2 py-1 text-blue-300">투입 {assignedVehicles}대</span>
-                        <span>{work.updated}</span>
-                      </div>
+                      <p className="mt-2 text-xs font-bold text-slate-400">흐림 · 간헐적 강설 지속</p>
                     </div>
-
-                    <div className="mt-3 flex items-center gap-3">
-                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-800">
-                        <div
-                          className={`h-full rounded-full ${work.progress === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`}
-                          style={{ width: `${work.progress}%` }}
-                        />
-                      </div>
-                      <span className="w-10 text-right font-mono text-xs font-black text-slate-300">{work.progress}%</span>
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-sky-400/15 bg-sky-400/10 text-4xl text-sky-200 shadow-[0_0_30px_rgba(56,189,248,0.08)]">
+                      ❄
                     </div>
                   </div>
-                );
-              })}
+
+                  <div className="mt-5 rounded-xl border border-amber-500/15 bg-amber-500/[0.06] px-3.5 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[10px] font-black tracking-[0.12em] text-amber-300">SNOW OPERATION NOTE</span>
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
+                    </div>
+                    <p className="mt-1.5 text-[11px] leading-5 text-slate-400">노면 결빙 가능성이 높은 샘플 조건입니다. 기상 API 연동 시 실제 관제지역 값으로 자동 갱신됩니다.</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                  {weatherMetrics.map((metric) => (
+                    <div key={metric.label} className="rounded-xl border border-slate-800/70 bg-slate-950/40 p-3.5">
+                      <p className="text-[10px] font-bold text-slate-600">{metric.label}</p>
+                      <p className={`mt-2 font-mono text-xl font-black ${metric.accent}`}>
+                        {metric.value}<span className="ml-1 text-[10px] font-bold text-slate-600">{metric.unit}</span>
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-6">
+                {weatherForecast.map((forecast) => (
+                  <div key={forecast.time} className="rounded-xl border border-slate-800/60 bg-slate-950/35 px-2.5 py-3 text-center">
+                    <p className="text-[10px] font-bold text-slate-600">{forecast.time}</p>
+                    <p className="my-1.5 text-lg text-sky-300">{forecast.icon}</p>
+                    <p className="font-mono text-xs font-black text-slate-200">{forecast.temp}</p>
+                    <p className="mt-1 text-[9px] font-bold text-slate-600">{forecast.snow}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -219,34 +260,90 @@ export default function SupportDashboardPage() {
           </div>
         </section>
 
-        <section className="mt-5 rounded-2xl border border-slate-800/80 bg-slate-900/55 p-5 shadow-lg">
-          <SectionHeader
-            eyebrow="MATERIAL STATUS"
-            title="주요 제설자재 현황"
-            description="전체 저장소 기준 재고 수준을 요약합니다."
-            action={<Link href="/sup/stock" className="text-[10px] font-black text-blue-400 hover:text-blue-300">재고관리 →</Link>}
-          />
+        <section className="mt-5 grid gap-5 xl:grid-cols-2">
+          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/55 p-5 shadow-lg">
+            <SectionHeader
+              eyebrow="TODAY'S OPERATION"
+              title="금일 구역별 제설 작업 현황"
+              description="차량관리에서 지정한 담당구역을 기준으로 현재 투입 차량 수를 표시합니다."
+              action={<span className="rounded-lg bg-slate-950 px-2.5 py-1.5 text-[10px] font-bold text-slate-500">{visibleAreas.length}개 운영 구역</span>}
+            />
 
-          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {materials.map((material) => (
-              <div key={material.name} className="rounded-xl border border-slate-800/70 bg-slate-950/45 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-black text-slate-200">{material.name}</p>
-                    <p className="mt-2 font-mono text-xl font-black text-white">{material.amount}</p>
+            <div className="mt-5 space-y-3">
+              {visibleAreas.length > 0 ? visibleAreas.map((work) => {
+                const assignedVehicles = areaVehicleCount(work.name);
+                return (
+                  <div key={work.id} className="rounded-xl border border-slate-800/70 bg-slate-950/45 p-4 transition hover:border-slate-700">
+                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-black text-slate-100">{work.name}</p>
+                          <span className={`rounded-md px-2 py-0.5 text-[9px] font-black ${
+                            work.status === '완료'
+                              ? 'bg-emerald-500/10 text-emerald-300'
+                              : work.status === '진행중'
+                                ? 'bg-blue-500/10 text-blue-300'
+                                : 'bg-slate-800 text-slate-400'
+                          }`}>
+                            {work.status}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-[11px] text-slate-500">{work.route || '주요 노선 미등록'}</p>
+                      </div>
+                      <div className="flex items-center gap-4 text-[10px] font-bold text-slate-500">
+                        <span className="rounded-md bg-blue-500/10 px-2 py-1 text-blue-300">투입 {assignedVehicles}대</span>
+                        <span>{work.updated}</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex items-center gap-3">
+                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-800">
+                        <div
+                          className={`h-full rounded-full ${work.progress === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                          style={{ width: `${work.progress}%` }}
+                        />
+                      </div>
+                      <span className="w-10 text-right font-mono text-xs font-black text-slate-300">{work.progress}%</span>
+                    </div>
                   </div>
-                  <span className={`rounded-md px-2 py-1 text-[9px] font-black ${material.state === '보충 필요' ? 'bg-amber-500/10 text-amber-300' : 'bg-slate-800 text-slate-400'}`}>
-                    {material.state}
-                  </span>
+                );
+              }) : (
+                <div className="rounded-xl border border-dashed border-slate-800 p-8 text-center text-xs font-bold text-slate-600">
+                  현재 사용중인 담당구역이 없습니다.
                 </div>
-                <div className="mt-4 flex items-center gap-3">
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800">
-                    <div className={`h-full rounded-full ${material.tone}`} style={{ width: `${material.percent}%` }} />
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/55 p-5 shadow-lg">
+            <SectionHeader
+              eyebrow="MATERIAL STATUS"
+              title="주요 제설자재 현황"
+              description="전체 저장소 기준 재고 수준을 요약합니다."
+              action={<Link href="/sup/stock" className="text-[10px] font-black text-blue-400 hover:text-blue-300">재고관리 →</Link>}
+            />
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {materials.map((material) => (
+                <div key={material.name} className="rounded-xl border border-slate-800/70 bg-slate-950/45 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-black text-slate-200">{material.name}</p>
+                      <p className="mt-2 font-mono text-xl font-black text-white">{material.amount}</p>
+                    </div>
+                    <span className={`rounded-md px-2 py-1 text-[9px] font-black ${material.state === '보충 필요' ? 'bg-amber-500/10 text-amber-300' : 'bg-slate-800 text-slate-400'}`}>
+                      {material.state}
+                    </span>
                   </div>
-                  <span className="font-mono text-[10px] font-black text-slate-500">{material.percent}%</span>
+                  <div className="mt-4 flex items-center gap-3">
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800">
+                      <div className={`h-full rounded-full ${material.tone}`} style={{ width: `${material.percent}%` }} />
+                    </div>
+                    <span className="font-mono text-[10px] font-black text-slate-500">{material.percent}%</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </section>
       </div>
