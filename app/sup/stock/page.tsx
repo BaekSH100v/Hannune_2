@@ -73,7 +73,7 @@ export default function StockPage() {
       const parsed = JSON.parse(saved) as WarehouseRecord[];
       if (Array.isArray(parsed) && parsed.length > 0) setWarehouses(parsed);
     } catch {
-      // 프로토타입에서는 저장 데이터 오류 시 기본값을 사용합니다.
+      // 저장 데이터 오류 시 기본값 사용
     }
   }, []);
 
@@ -184,150 +184,168 @@ export default function StockPage() {
         </div>
       </div>
 
-      <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-4">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2">📊 {currentYear}년 월별 자재 입출고 현황</h3>
+      <section className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-sm font-bold text-white flex items-center gap-2">📊 {currentYear}년 월별 자재 입출고 현황</h3>
+          <div className="flex items-center gap-4">
+            <span className="text-[10px] text-slate-400 flex items-center gap-1"><span className="w-3 h-3 bg-blue-600 rounded-sm" /> 입고량</span>
+            <span className="text-[10px] text-slate-400 flex items-center gap-1"><span className="w-3 h-3 bg-amber-500 rounded-sm" /> 출고량</span>
+          </div>
+        </div>
 
-        <div className="flex items-end justify-between h-48 pt-4 gap-2 border-b border-slate-800 pb-2">
+        <div className="flex items-end justify-between h-56 pt-8 gap-2 border-b border-slate-800 pb-2">
           {monthlyStats.map((stat) => {
             const inHeight = Math.min((stat.inbound / 350) * 100, 100);
             const outHeight = Math.min((stat.outbound / 350) * 100, 100);
             return (
-              <div key={stat.month} className="flex flex-col items-center gap-2 flex-1 group">
-                <div className="flex gap-1 w-full justify-center items-end h-full">
-                  <div className="w-1/3 bg-blue-600 rounded-t-sm transition-all duration-700 group-hover:bg-blue-500" style={{ height: `${inHeight}%` }} title={`입고: ${stat.inbound}`} />
-                  <div className="w-1/3 bg-amber-500 rounded-t-sm transition-all duration-700 group-hover:bg-amber-400" style={{ height: `${outHeight}%` }} title={`출고: ${stat.outbound}`} />
+              <div key={stat.month} className="flex flex-col items-center gap-2 flex-1 group min-w-0">
+                <div className="flex gap-1.5 w-full justify-center items-end h-full">
+                  <div
+                    className="relative w-[34%] bg-blue-600 rounded-t-sm transition-all duration-700 group-hover:bg-blue-500 min-w-[10px]"
+                    style={{ height: `${inHeight}%` }}
+                  >
+                    <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-[9px] font-black text-blue-300">{stat.inbound}</span>
+                  </div>
+                  <div
+                    className="relative w-[34%] bg-amber-500 rounded-t-sm transition-all duration-700 group-hover:bg-amber-400 min-w-[10px]"
+                    style={{ height: `${outHeight}%` }}
+                  >
+                    <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-[9px] font-black text-amber-300">{stat.outbound}</span>
+                  </div>
                 </div>
                 <span className="text-[10px] font-mono text-slate-500 whitespace-nowrap">{stat.month}</span>
               </div>
             );
           })}
         </div>
-        <div className="flex justify-end gap-4">
-          <span className="text-[10px] text-slate-400 flex items-center gap-1"><span className="w-3 h-3 bg-blue-600 rounded-sm" /> 입고량</span>
-          <span className="text-[10px] text-slate-400 flex items-center gap-1"><span className="w-3 h-3 bg-amber-500 rounded-sm" /> 출고량</span>
-        </div>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 shadow-xl flex flex-col gap-4">
-          <div>
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">🏬 재고 관리</h3>
-            <p className="mt-1 text-[10px] text-slate-500">담당자·연락처는 마이페이지에서 관리하고, 자재명과 총 수량은 여기에서 수정합니다.</p>
-          </div>
-
-          <div className="overflow-x-auto rounded-xl border border-slate-800">
-            <table className="w-full min-w-[720px] text-left text-xs border-collapse">
-              <thead className="bg-slate-950 text-slate-500 font-bold border-b border-slate-800">
-                <tr>
-                  <th className="p-3">자재 창고명</th>
-                  <th className="p-3">자재명</th>
-                  <th className="p-3">담당자</th>
-                  <th className="p-3">연락처</th>
-                  <th className="p-3 text-right">총 수량</th>
-                  <th className="p-3 text-center">관리</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {warehouses.map((warehouse) => {
-                  const isEditing = editingWarehouseId === warehouse.id && warehouseForm;
-                  return (
-                    <tr key={warehouse.id} className={isEditing ? 'bg-blue-500/5' : 'hover:bg-slate-800/35'}>
-                      <td className="p-3 font-black text-slate-200">{warehouse.name}</td>
-                      <td className="p-3">
-                        {isEditing ? (
-                          <select
-                            value={warehouseForm.material}
-                            onChange={(e) => handleWarehouseMaterialChange(e.target.value)}
-                            className="w-full rounded-md border border-blue-500 bg-slate-950 px-2 py-1.5 text-xs font-bold text-white outline-none"
-                          >
-                            {MATERIAL_OPTIONS.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}
-                          </select>
-                        ) : (
-                          <span className="rounded-md bg-blue-500/10 px-2 py-1 text-[10px] font-black text-blue-300">{warehouse.material}</span>
-                        )}
-                      </td>
-                      <td className="p-3 font-bold text-slate-300">{warehouse.manager}</td>
-                      <td className="p-3 font-mono text-slate-500">{warehouse.phone}</td>
-                      <td className="p-3 text-right">
-                        {isEditing ? (
-                          <div className="flex items-center justify-end gap-1.5">
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.1"
-                              value={warehouseForm.total}
-                              onChange={(e) => setWarehouseForm({ ...warehouseForm, total: Number(e.target.value) })}
-                              className="w-20 rounded-md border border-blue-500 bg-slate-950 px-2 py-1.5 text-right font-mono text-xs font-bold text-white outline-none"
-                            />
-                            <select
-                              value={warehouseForm.unit}
-                              onChange={(e) => setWarehouseForm({ ...warehouseForm, unit: e.target.value })}
-                              className="rounded-md border border-blue-500 bg-slate-950 px-2 py-1.5 text-xs text-white outline-none"
-                            >
-                              <option value="톤">톤</option>
-                              <option value="포">포</option>
-                              <option value="개">개</option>
-                              <option value="kg">kg</option>
-                            </select>
-                          </div>
-                        ) : (
-                          <span className="font-mono text-sm font-black text-blue-300">{warehouse.total.toLocaleString()} {warehouse.unit}</span>
-                        )}
-                      </td>
-                      <td className="p-3 text-center">
-                        {isEditing ? (
-                          <div className="flex justify-center gap-1.5">
-                            <button onClick={handleWarehouseSave} className="rounded-md bg-blue-600 px-2.5 py-1.5 text-[10px] font-black text-white hover:bg-blue-500">저장</button>
-                            <button onClick={() => { setEditingWarehouseId(null); setWarehouseForm(null); }} className="rounded-md border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-[10px] font-bold text-slate-300 hover:bg-slate-700">취소</button>
-                          </div>
-                        ) : (
-                          <button onClick={() => handleWarehouseEdit(warehouse)} className="rounded-md border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-[10px] font-bold text-blue-300 hover:bg-slate-700">수정</button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+      <section className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 shadow-xl flex flex-col gap-4">
+        <div>
+          <h3 className="text-sm font-bold text-white flex items-center gap-2">🏬 재고 관리</h3>
+          <p className="mt-1 text-[10px] text-slate-500">담당자·연락처는 마이페이지에서 관리하고, 자재명과 총 수량은 여기에서 수정합니다.</p>
         </div>
 
-        <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 shadow-xl flex flex-col gap-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">📝 실시간 입출고 및 요청 로그</h3>
-            <span className="px-2 py-1 bg-slate-800 text-slate-400 text-[10px] rounded font-bold">전체 보기</span>
-          </div>
-
-          <div className="overflow-x-auto rounded-xl border border-slate-800 h-full">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-slate-950 text-slate-400 font-bold border-b border-slate-800">
-                <tr>
-                  <th className="p-3">일시</th>
-                  <th className="p-3">구분</th>
-                  <th className="p-3">자재 창고</th>
-                  <th className="p-3">자재명</th>
-                  <th className="p-3 text-right">수량</th>
-                  <th className="p-3 text-center">담당자</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {stockLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="p-3 font-mono text-slate-500">{log.date}</td>
+        <div className="overflow-hidden rounded-xl border border-slate-800">
+          <table className="w-full table-fixed text-left text-xs border-collapse">
+            <colgroup>
+              <col className="w-[23%]" />
+              <col className="w-[16%]" />
+              <col className="w-[11%]" />
+              <col className="w-[20%]" />
+              <col className="w-[18%]" />
+              <col className="w-[12%]" />
+            </colgroup>
+            <thead className="bg-slate-950 text-slate-500 font-bold border-b border-slate-800">
+              <tr>
+                <th className="p-3">자재 창고명</th>
+                <th className="p-3">자재명</th>
+                <th className="p-3">담당자</th>
+                <th className="p-3">연락처</th>
+                <th className="p-3 text-right">총 관리 수량</th>
+                <th className="p-3 text-center">관리</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60">
+              {warehouses.map((warehouse) => {
+                const isEditing = editingWarehouseId === warehouse.id && warehouseForm;
+                return (
+                  <tr key={warehouse.id} className={isEditing ? 'bg-blue-500/5' : 'hover:bg-slate-800/35'}>
+                    <td className="p-3 font-black text-slate-200 truncate" title={warehouse.name}>{warehouse.name}</td>
                     <td className="p-3">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${log.type === '입고' ? 'bg-blue-950/50 text-blue-400 border-blue-900' : log.type === '출고' ? 'bg-amber-950/50 text-amber-400 border-amber-900' : 'bg-red-950/50 text-red-400 border-red-900'}`}>{log.type}</span>
+                      {isEditing ? (
+                        <select
+                          value={warehouseForm.material}
+                          onChange={(e) => handleWarehouseMaterialChange(e.target.value)}
+                          className="w-full rounded-md border border-blue-500 bg-slate-950 px-2 py-1.5 text-xs font-bold text-white outline-none"
+                        >
+                          {MATERIAL_OPTIONS.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}
+                        </select>
+                      ) : (
+                        <span className="inline-flex max-w-full rounded-md bg-blue-500/10 px-2 py-1 text-[10px] font-black text-blue-300 whitespace-nowrap">{warehouse.material}</span>
+                      )}
                     </td>
-                    <td className="p-3 text-slate-300 font-bold">{log.region}</td>
-                    <td className="p-3 text-slate-300">{log.item}</td>
-                    <td className="p-3 text-right font-mono font-black text-slate-200">{log.type === '출고' ? '-' : '+'}{log.qty} <span className="text-[10px] font-sans text-slate-500 font-normal">{log.unit}</span></td>
-                    <td className="p-3 text-center text-slate-400">{log.manager}</td>
+                    <td className="p-3 font-bold text-slate-300 whitespace-nowrap">{warehouse.manager}</td>
+                    <td className="p-3 font-mono text-slate-500 whitespace-nowrap">{warehouse.phone}</td>
+                    <td className="p-3 text-right whitespace-nowrap">
+                      {isEditing ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            value={warehouseForm.total}
+                            onChange={(e) => setWarehouseForm({ ...warehouseForm, total: Number(e.target.value) })}
+                            className="w-24 rounded-md border border-blue-500 bg-slate-950 px-2 py-1.5 text-right font-mono text-xs font-bold text-white outline-none"
+                          />
+                          <select
+                            value={warehouseForm.unit}
+                            onChange={(e) => setWarehouseForm({ ...warehouseForm, unit: e.target.value })}
+                            className="rounded-md border border-blue-500 bg-slate-950 px-2 py-1.5 text-xs text-white outline-none"
+                          >
+                            <option value="톤">톤</option>
+                            <option value="포">포</option>
+                            <option value="개">개</option>
+                            <option value="kg">kg</option>
+                          </select>
+                        </div>
+                      ) : (
+                        <span className="font-mono text-sm font-black text-blue-300">{warehouse.total.toLocaleString()} {warehouse.unit}</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-center whitespace-nowrap">
+                      {isEditing ? (
+                        <div className="flex justify-center gap-1.5">
+                          <button onClick={handleWarehouseSave} className="rounded-md bg-blue-600 px-2.5 py-1.5 text-[10px] font-black text-white hover:bg-blue-500">저장</button>
+                          <button onClick={() => { setEditingWarehouseId(null); setWarehouseForm(null); }} className="rounded-md border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-[10px] font-bold text-slate-300 hover:bg-slate-700">취소</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => handleWarehouseEdit(warehouse)} className="rounded-md border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-[10px] font-bold text-blue-300 hover:bg-slate-700">수정</button>
+                      )}
+                    </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
-      </div>
+      </section>
+
+      <section className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 shadow-xl flex flex-col gap-4">
+        <div className="flex justify-between items-center">
+          <h3 className="text-sm font-bold text-white flex items-center gap-2">📝 실시간 입출고 및 요청 로그</h3>
+          <span className="px-2 py-1 bg-slate-800 text-slate-400 text-[10px] rounded font-bold">전체 보기</span>
+        </div>
+
+        <div className="overflow-hidden rounded-xl border border-slate-800">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead className="bg-slate-950 text-slate-400 font-bold border-b border-slate-800">
+              <tr>
+                <th className="p-3">일시</th>
+                <th className="p-3">구분</th>
+                <th className="p-3">자재 창고</th>
+                <th className="p-3">자재명</th>
+                <th className="p-3 text-right">수량</th>
+                <th className="p-3 text-center">담당자</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60">
+              {stockLogs.map((log) => (
+                <tr key={log.id} className="hover:bg-slate-800/40 transition-colors">
+                  <td className="p-3 font-mono text-slate-500 whitespace-nowrap">{log.date}</td>
+                  <td className="p-3">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${log.type === '입고' ? 'bg-blue-950/50 text-blue-400 border-blue-900' : log.type === '출고' ? 'bg-amber-950/50 text-amber-400 border-amber-900' : 'bg-red-950/50 text-red-400 border-red-900'}`}>{log.type}</span>
+                  </td>
+                  <td className="p-3 text-slate-300 font-bold">{log.region}</td>
+                  <td className="p-3 text-slate-300">{log.item}</td>
+                  <td className="p-3 text-right font-mono font-black text-slate-200 whitespace-nowrap">{log.type === '출고' ? '-' : '+'}{log.qty} <span className="text-[10px] font-sans text-slate-500 font-normal">{log.unit}</span></td>
+                  <td className="p-3 text-center text-slate-400">{log.manager}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
