@@ -88,6 +88,10 @@ export default function StockPage() {
   const [isWarehouseAddOpen, setIsWarehouseAddOpen] = useState(false);
   const [newWarehouse, setNewWarehouse] = useState({ name: '', managerId: '', material: '', total: '', unit: '톤' });
 
+  const [isMaterialManageOpen, setIsMaterialManageOpen] = useState(false);
+  const [editingMaterialName, setEditingMaterialName] = useState<string | null>(null);
+  const [materialForm, setMaterialForm] = useState<MaterialOption | null>(null);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalForm, setModalForm] = useState({ type: '입고', region: initialWarehouses[0].name, item: initialWarehouses[0].material, qty: 0 });
 
@@ -131,6 +135,11 @@ export default function StockPage() {
     window.localStorage.setItem(STOCK_LOG_STORAGE_KEY, JSON.stringify(next));
   };
 
+  const persistMaterials = (next: MaterialOption[]) => {
+    setMaterials(next);
+    window.localStorage.setItem(MATERIAL_STORAGE_KEY, JSON.stringify(next));
+  };
+
   const warehouseManagers = useMemo(() => managers.filter((manager) => manager.level === '창고 담당자'), [managers]);
 
   const monthlyStats = useMemo(() => Array.from({ length: 12 }, (_, index) => {
@@ -157,10 +166,56 @@ export default function StockPage() {
 
     const rawUnit = window.prompt('기본 단위를 입력해 주세요. (예: 톤, 포, 개, kg)', '톤');
     const option: MaterialOption = { name, defaultUnit: rawUnit?.trim() || '톤' };
-    const next = [...materials, option];
-    setMaterials(next);
-    window.localStorage.setItem(MATERIAL_STORAGE_KEY, JSON.stringify(next));
+    persistMaterials([...materials, option]);
     return option;
+  };
+
+  const isDefaultMaterial = (name: string) => DEFAULT_MATERIALS.some((item) => item.name === name);
+
+  const startMaterialEdit = (material: MaterialOption) => {
+    if (isDefaultMaterial(material.name)) return;
+    setEditingMaterialName(material.name);
+    setMaterialForm({ ...material });
+  };
+
+  const saveMaterialEdit = () => {
+    if (!editingMaterialName || !materialForm) return;
+    const nextName = materialForm.name.trim();
+    const nextUnit = materialForm.defaultUnit.trim() || '톤';
+
+    if (!nextName) {
+      window.alert('자재명을 입력해 주세요.');
+      return;
+    }
+    if (materials.some((item) => item.name === nextName && item.name !== editingMaterialName)) {
+      window.alert('같은 이름의 자재가 이미 등록되어 있습니다.');
+      return;
+    }
+
+    const nextMaterials = materials.map((item) => item.name === editingMaterialName ? { name: nextName, defaultUnit: nextUnit } : item);
+    const nextWarehouses = warehouses.map((warehouse) => warehouse.material === editingMaterialName ? { ...warehouse, material: nextName } : warehouse);
+    const nextLogs = stockLogs.map((log) => log.item === editingMaterialName ? { ...log, item: nextName } : log);
+
+    persistMaterials(nextMaterials);
+    persistWarehouses(nextWarehouses);
+    persistLogs(nextLogs);
+
+    setWarehouseForm((current) => current?.material === editingMaterialName ? { ...current, material: nextName } : current);
+    setNewWarehouse((current) => current.material === editingMaterialName ? { ...current, material: nextName } : current);
+    setModalForm((current) => current.item === editingMaterialName ? { ...current, item: nextName } : current);
+    setEditingMaterialName(null);
+    setMaterialForm(null);
+  };
+
+  const deleteMaterial = (material: MaterialOption) => {
+    if (isDefaultMaterial(material.name)) return;
+    const inUse = warehouses.some((warehouse) => warehouse.material === material.name) || stockLogs.some((log) => log.item === material.name);
+    if (inUse) {
+      window.alert('현재 창고 또는 입출고 기록에서 사용 중인 자재입니다. 오타라면 삭제보다 “수정”을 사용하면 기존 창고와 기록까지 한 번에 변경됩니다.');
+      return;
+    }
+    if (!window.confirm(`'${material.name}' 자재명을 삭제하시겠습니까?`)) return;
+    persistMaterials(materials.filter((item) => item.name !== material.name));
   };
 
   const handleWarehouseMaterialChange = (value: string) => {
@@ -182,6 +237,25 @@ export default function StockPage() {
     persistWarehouses(warehouses.map((warehouse) => warehouse.id === editingWarehouseId ? warehouseForm : warehouse));
     setEditingWarehouseId(null);
     setWarehouseForm(null);
+  };
+
+  const deleteWarehouse = (warehouse: WarehouseRecord) => {
+    if (!window.confirm(`'${warehouse.name}' 창고를 재고관리에서 삭제하시겠습니까?\n\n기존 입출고 기록과 마이페이지 담당자 정보는 삭제되지 않습니다.`)) return;
+    const nextWarehouses = warehouses.filter((item) => item.id !== warehouse.id);
+    persistWarehouses(nextWarehouses);
+
+    if (editingWarehouseId === warehouse.id) {
+      setEditingWarehouseId(null);
+      setWarehouseForm(null);
+    }
+    if (modalForm.region === warehouse.name) {
+      const first = nextWarehouses[0];
+      setModalForm((current) => ({
+        ...current,
+        region: first?.name ?? '',
+        item: first?.material || materials[0]?.name || '',
+      }));
+    }
   };
 
   const handleNewWarehouseMaterialChange = (value: string) => {
@@ -337,7 +411,10 @@ export default function StockPage() {
             <h3 className="text-sm font-bold text-white">🏬 재고 관리</h3>
             <p className="mt-1 text-[10px] text-slate-500">담당자·연락처는 마이페이지에서 관리하고, 자재명과 총 관리 수량은 여기에서 수정합니다.</p>
           </div>
-          <button onClick={() => setIsWarehouseAddOpen(true)} className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-3.5 py-2 text-xs font-black text-blue-300 hover:bg-blue-500/15">+ 자재 창고 추가</button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setIsMaterialManageOpen(true)} className="rounded-lg border border-slate-700 bg-slate-800 px-3.5 py-2 text-xs font-bold text-slate-300 hover:bg-slate-700">자재명 관리</button>
+            <button onClick={() => setIsWarehouseAddOpen(true)} className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-3.5 py-2 text-xs font-black text-blue-300 hover:bg-blue-500/15">+ 자재 창고 추가</button>
+          </div>
         </div>
 
         <div className="overflow-hidden rounded-xl border border-slate-800">
@@ -370,7 +447,17 @@ export default function StockPage() {
                       ) : warehouse.total === null ? <span className="text-[10px] font-bold text-amber-300">미입력</span> : <span className="font-mono text-sm font-black text-blue-300">{Number(warehouse.total).toLocaleString()} {warehouse.unit}</span>}
                     </td>
                     <td className="p-3 text-center">
-                      {editForm ? <div className="flex justify-center gap-1.5"><button onClick={saveWarehouseEdit} className="rounded-md bg-blue-600 px-2.5 py-1.5 text-[10px] font-black text-white">저장</button><button onClick={() => { setEditingWarehouseId(null); setWarehouseForm(null); }} className="rounded-md border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-[10px] font-bold text-slate-300">취소</button></div> : <button onClick={() => { setEditingWarehouseId(warehouse.id); setWarehouseForm({ ...warehouse }); }} className="rounded-md border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-[10px] font-bold text-blue-300">수정</button>}
+                      {editForm ? (
+                        <div className="flex justify-center gap-1.5">
+                          <button onClick={saveWarehouseEdit} className="rounded-md bg-blue-600 px-2.5 py-1.5 text-[10px] font-black text-white">저장</button>
+                          <button onClick={() => { setEditingWarehouseId(null); setWarehouseForm(null); }} className="rounded-md border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-[10px] font-bold text-slate-300">취소</button>
+                        </div>
+                      ) : (
+                        <div className="flex justify-center gap-1.5">
+                          <button onClick={() => { setEditingWarehouseId(warehouse.id); setWarehouseForm({ ...warehouse }); }} className="rounded-md border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-[10px] font-bold text-blue-300 hover:bg-slate-700">수정</button>
+                          <button onClick={() => deleteWarehouse(warehouse)} className="rounded-md border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 text-[10px] font-bold text-rose-300 hover:bg-rose-500/20">삭제</button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );
@@ -394,6 +481,49 @@ export default function StockPage() {
           </table>
         </div>
       </section>
+
+      {isMaterialManageOpen && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 bg-slate-950 px-6 py-4">
+              <div><h3 className="font-black text-white">자재명 관리</h3><p className="mt-1 text-[10px] text-slate-500">사용자 추가 자재는 이름과 기본 단위를 수정할 수 있습니다. 오타 수정 시 기존 창고·입출고 기록에도 함께 반영됩니다.</p></div>
+              <button onClick={() => { setIsMaterialManageOpen(false); setEditingMaterialName(null); setMaterialForm(null); }} className="text-slate-500 hover:text-white">✕</button>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto p-5">
+              <div className="overflow-hidden rounded-xl border border-slate-800">
+                <table className="w-full text-left text-xs">
+                  <thead className="border-b border-slate-800 bg-slate-950 text-slate-500"><tr><th className="p-3">자재명</th><th className="p-3">기본 단위</th><th className="p-3">구분</th><th className="p-3 text-center">관리</th></tr></thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {materials.map((material) => {
+                      const isDefault = isDefaultMaterial(material.name);
+                      const isEditing = editingMaterialName === material.name && materialForm;
+                      return (
+                        <tr key={material.name} className={isEditing ? 'bg-blue-500/5' : 'hover:bg-slate-800/30'}>
+                          <td className="p-3 font-bold text-slate-200">
+                            {isEditing ? <input value={materialForm.name} onChange={(e) => setMaterialForm({ ...materialForm, name: e.target.value })} className="w-full rounded-md border border-blue-500 bg-slate-950 px-2 py-1.5 text-xs text-white outline-none" /> : material.name}
+                          </td>
+                          <td className="p-3">
+                            {isEditing ? <input value={materialForm.defaultUnit} onChange={(e) => setMaterialForm({ ...materialForm, defaultUnit: e.target.value })} className="w-24 rounded-md border border-blue-500 bg-slate-950 px-2 py-1.5 text-xs text-white outline-none" /> : <span className="font-mono text-slate-400">{material.defaultUnit}</span>}
+                          </td>
+                          <td className="p-3"><span className={`rounded-md px-2 py-1 text-[9px] font-black ${isDefault ? 'bg-slate-800 text-slate-500' : 'bg-blue-500/10 text-blue-300'}`}>{isDefault ? '기본 자재' : '사용자 추가'}</span></td>
+                          <td className="p-3 text-center">
+                            {isDefault ? <span className="text-[10px] text-slate-700">수정 불가</span> : isEditing ? (
+                              <div className="flex justify-center gap-1.5"><button onClick={saveMaterialEdit} className="rounded-md bg-blue-600 px-2.5 py-1.5 text-[10px] font-black text-white">저장</button><button onClick={() => { setEditingMaterialName(null); setMaterialForm(null); }} className="rounded-md border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-[10px] font-bold text-slate-300">취소</button></div>
+                            ) : (
+                              <div className="flex justify-center gap-1.5"><button onClick={() => startMaterialEdit(material)} className="rounded-md border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-[10px] font-bold text-blue-300">수정</button><button onClick={() => deleteMaterial(material)} className="rounded-md border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 text-[10px] font-bold text-rose-300">삭제</button></div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <button onClick={addCustomMaterial} className="mt-4 w-full rounded-xl border border-dashed border-blue-500/30 bg-blue-500/5 px-4 py-3 text-xs font-black text-blue-300 hover:bg-blue-500/10">+ 신규 자재 등록</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isWarehouseAddOpen && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
