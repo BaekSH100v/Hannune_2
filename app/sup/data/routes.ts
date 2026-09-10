@@ -14,7 +14,7 @@ export type RouteRecord = {
   priority: RoutePriority;
   enabled: boolean;
   distanceKm: number;
-  checkpoints: number;
+  checkpointPoints: RoutePoint[];
   passedCheckpoints: number;
   passesToday: number;
   lastActivity: string;
@@ -33,7 +33,13 @@ export const initialRoutes: RouteRecord[] = [
     priority: '최우선',
     enabled: true,
     distanceKm: 12.8,
-    checkpoints: 5,
+    checkpointPoints: [
+      { x: 21, y: 65 },
+      { x: 35, y: 57 },
+      { x: 51, y: 47 },
+      { x: 68, y: 41 },
+      { x: 82, y: 31 },
+    ],
     passedCheckpoints: 5,
     passesToday: 4,
     lastActivity: '7분 전',
@@ -55,7 +61,11 @@ export const initialRoutes: RouteRecord[] = [
     priority: '중요',
     enabled: true,
     distanceKm: 8.4,
-    checkpoints: 3,
+    checkpointPoints: [
+      { x: 29, y: 29 },
+      { x: 46, y: 39 },
+      { x: 66, y: 63 },
+    ],
     passedCheckpoints: 3,
     passesToday: 3,
     lastActivity: '18분 전',
@@ -76,7 +86,14 @@ export const initialRoutes: RouteRecord[] = [
     priority: '최우선',
     enabled: true,
     distanceKm: 15.6,
-    checkpoints: 6,
+    checkpointPoints: [
+      { x: 16, y: 46 },
+      { x: 30, y: 48 },
+      { x: 43, y: 49 },
+      { x: 57, y: 56 },
+      { x: 72, y: 59 },
+      { x: 85, y: 57 },
+    ],
     passedCheckpoints: 5,
     passesToday: 3,
     lastActivity: '12분 전',
@@ -98,7 +115,12 @@ export const initialRoutes: RouteRecord[] = [
     priority: '중요',
     enabled: true,
     distanceKm: 10.2,
-    checkpoints: 4,
+    checkpointPoints: [
+      { x: 27, y: 72 },
+      { x: 43, y: 65 },
+      { x: 58, y: 57 },
+      { x: 72, y: 51 },
+    ],
     passedCheckpoints: 3,
     passesToday: 2,
     lastActivity: '46분 전',
@@ -119,7 +141,11 @@ export const initialRoutes: RouteRecord[] = [
     priority: '일반',
     enabled: true,
     distanceKm: 7.9,
-    checkpoints: 3,
+    checkpointPoints: [
+      { x: 43, y: 27 },
+      { x: 61, y: 35 },
+      { x: 80, y: 39 },
+    ],
     passedCheckpoints: 0,
     passesToday: 0,
     lastActivity: '금일 미확인',
@@ -142,7 +168,12 @@ export function loadRoutes(): RouteRecord[] {
     if (!saved) return initialRoutes;
 
     const parsed = JSON.parse(saved) as RouteRecord[];
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : initialRoutes;
+    if (!Array.isArray(parsed) || parsed.length === 0) return initialRoutes;
+
+    return parsed.map((route) => ({
+      ...route,
+      checkpointPoints: Array.isArray(route.checkpointPoints) ? route.checkpointPoints : [],
+    }));
   } catch {
     return initialRoutes;
   }
