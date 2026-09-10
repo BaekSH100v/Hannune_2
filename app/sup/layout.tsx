@@ -11,6 +11,7 @@ export default function SupportLayout({ children }: { children: React.ReactNode 
     { name: '대시보드', href: '/sup' },
     { name: '보고서관리', href: '/sup/report' },
     { name: '차량관리', href: '/sup/vehicle' },
+    { name: '노선관리', href: '/sup/route' },
     { name: '재고관리', href: '/sup/stock' },
     { name: '마이페이지', href: '/sup/mypage' },
   ];
@@ -37,7 +38,7 @@ export default function SupportLayout({ children }: { children: React.ReactNode 
               <Link
                 key={menu.href}
                 href={menu.href}
-                className={`px-4 xl:px-5 py-1.5 rounded-lg text-xs xl:text-sm font-bold transition-all duration-200 inline-block ${
+                className={`px-3 xl:px-4 py-1.5 rounded-lg text-xs xl:text-sm font-bold transition-all duration-200 inline-block ${
                   isActive
                     ? 'bg-slate-800 text-white shadow-md border border-slate-700'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
